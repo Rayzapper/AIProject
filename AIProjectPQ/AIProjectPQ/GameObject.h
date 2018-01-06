@@ -6,13 +6,21 @@
 class GameObject
 {
 public:
-	virtual void Update() = 0;
-	virtual void Render(sf::RenderWindow *window) = 0;
+	GameObject();
+	GameObject(sf::Shape *drawShape);
+	~GameObject();
+	virtual void Update(float dt);
+	void Render(sf::RenderWindow *window);
+	virtual void RenderSprite(sf::RenderWindow *window);
+	virtual void RenderShape(sf::RenderWindow *window);
 	sf::Vector2f GetPosition() const;
 	virtual void SetPosition(sf::Vector2f position);
+	virtual void SetTexture(sf::Texture *texture);
 protected:
-	GameObject();
 	sf::Vector2f m_Position;
+	sf::Sprite m_Sprite;
+	sf::Shape *m_Shape = nullptr;
+	bool m_RenderMode;
 };
 
 #endif

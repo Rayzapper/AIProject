@@ -1,9 +1,9 @@
-#include "Game.h"
+#include "GameBehavior.h"
 
 int main()
 {
 	srand((int)time(NULL));
-	Game game;
+	GameBehavior game;
 	game.Run();
 	return 0;
 }
