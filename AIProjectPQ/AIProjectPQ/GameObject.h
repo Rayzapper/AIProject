@@ -3,6 +3,8 @@
 
 #include <SFML\Graphics.hpp>
 
+#define PI (float)3.1415926
+
 class GameObject
 {
 public:
@@ -10,7 +12,7 @@ public:
 	GameObject(sf::Shape *drawShape);
 	~GameObject();
 	virtual void Update(float dt);
-	void Render(sf::RenderWindow *window);
+	virtual void Render(sf::RenderWindow *window);
 	virtual void RenderSprite(sf::RenderWindow *window);
 	virtual void RenderShape(sf::RenderWindow *window);
 	sf::Vector2f GetPosition() const;

@@ -1,6 +1,4 @@
 #include "GameBehavior.h"
-#include "Camera.h"
-#include "UIButton.h"
 #include "InputManager.h"
 #include <iostream>
 
@@ -14,7 +12,6 @@ GameBehavior::~GameBehavior()
 	m_GameState->Exit(true);
 	delete m_GameState;
 	delete m_Window;
-	delete m_Camera;
 }
 
 void GameBehavior::Run()
@@ -23,9 +20,6 @@ void GameBehavior::Run()
 
 	// Window creation
 	Initialize(windowWidth, windowHeight);
-
-	m_Camera = new Camera(m_Window);
-	m_Camera->SetView(MAINVIEW);
 
 	sf::Clock deltaClock;
 
@@ -49,7 +43,6 @@ void GameBehavior::Run()
 			if (event.type == sf::Event::Resized)
 			{
 				int newWidth = event.size.width, newHeight = event.size.height;
-				m_Camera->UpdateWindowSize(sf::Vector2i(newWidth, newHeight));
 			}
 		}
 
@@ -94,10 +87,14 @@ void GameBehavior::ExitGame()
 	m_Running = false;
 }
 
+void GameBehavior::TogglePause()
+{
+	m_GameState->TogglePause();
+}
+
 void GameBehavior::Update(float dt)
 {
 	InputManager::GetInstance().Update();
-	m_Camera->Update(dt, m_MouseScreenPosition);
 	m_GameState->Update(dt);
 	InputManager::GetInstance().Clear();
 }
@@ -123,11 +120,6 @@ void GameBehavior::Initialize(int windowWidth, int windowHeight)
 sf::RenderWindow* GameBehavior::State::GetWindow() const
 {
 	return m_GameBehavior->m_Window;
-}
-
-Camera* GameBehavior::State::GetCamera() const
-{
-	return m_GameBehavior->m_Camera;
 }
 
 sf::Vector2i GameBehavior::State::GetMouseScreenPosition() const
@@ -220,6 +212,17 @@ bool GameBehavior::CompositeState::OptionsMenu()
 	return handled;
 }
 
+bool GameBehavior::CompositeState::TogglePause()
+{
+	bool handled = false;
+	for each (State *s in m_ChildStates)
+	{
+		if (s->TogglePause())
+			handled = true;
+	}
+	return handled;
+}
+
 bool GameBehavior::CompositeState::Update(float dt)
 {
 	bool handled = false;
@@ -290,6 +293,11 @@ bool GameBehavior::DecoratedState::OptionsMenu()
 	return m_ChildState->OptionsMenu();
 }
 
+bool GameBehavior::DecoratedState::TogglePause()
+{
+	return m_ChildState->TogglePause();
+}
+
 bool GameBehavior::DecoratedState::Update(float dt)
 {
 	return m_ChildState->Update(dt);
@@ -331,6 +339,11 @@ bool GameBehavior::LeafState::OptionsMenu()
 	return false;
 }
 
+bool GameBehavior::LeafState::TogglePause()
+{
+	return false;
+}
+
 bool GameBehavior::LeafState::Update(float dt)
 {
 	return false;
@@ -352,6 +365,12 @@ GameBehavior::GameState::GameState(State *parentState, GameBehavior *gameBehavio
 	: DecoratedState(parentState, gameBehavior)
 {
 	m_ChildState = new MenuGameState(this, gameBehavior);
+}
+
+bool GameBehavior::GameState::StartGame()
+{
+	Transit(m_ChildState, new PlayGameState(this, m_GameBehavior));
+	return true;
 }
 
 
@@ -381,7 +400,6 @@ bool GameBehavior::MenuGameState::OptionsMenu()
 
 bool GameBehavior::MenuGameState::Render()
 {
-	GetCamera()->SetView(GUIVIEW);
 	return m_ChildState->Render();
 }
 
@@ -456,7 +474,7 @@ bool GameBehavior::MainMenuState::Update(float dt)
 			{
 				sf::String buttonString = b->GetString();
 				if (buttonString == "Play")
-					;
+					m_GameBehavior->StartGame();
 				else if (buttonString == "Options")
 					m_GameBehavior->OptionsMenu();
 				else
@@ -532,6 +550,102 @@ bool GameBehavior::OptionsMenuState::Update(float dt)
 
 bool GameBehavior::OptionsMenuState::Render()
 {
+	for each (UIButton *b in m_Buttons)
+	{
+		b->Render(m_GameBehavior->m_Window);
+	}
+	return true;
+}
+
+
+GameBehavior::PlayGameState::PlayGameState(State *parentState, GameBehavior *gameBehavior)
+	: DecoratedState(parentState, gameBehavior)
+{
+	m_Paused = false;
+	m_ChildState = new PausePlayState(parentState, gameBehavior);
+}
+
+void GameBehavior::PlayGameState::Enter(bool initialization)
+{
+	m_ChildState->Enter(initialization);
+}
+
+void GameBehavior::PlayGameState::Exit(bool finalization)
+{
+	m_ChildState->Exit(finalization);
+	delete m_ChildState;
+}
+
+bool GameBehavior::PlayGameState::TogglePause()
+{
+	m_Paused = !m_Paused;
+	return true;
+}
+
+bool GameBehavior::PlayGameState::Update(float dt)
+{
+	if (InputManager::GetInstance().GetInput(RETURN))
+		TogglePause();
+	if (m_Paused) return m_ChildState->Update(dt);
+	else return true;
+}
+
+bool GameBehavior::PlayGameState::Render()
+{
+
+	if (m_Paused) return m_ChildState->Render();
+	else return true;
+}
+
+
+GameBehavior::PausePlayState::PausePlayState(State *parentState, GameBehavior *gameBehavior)
+	: LeafState(parentState, gameBehavior)
+{
+	m_Background = new sf::RectangleShape(sf::Vector2f(1200.f, 900.f));
+	m_Background->setFillColor(sf::Color(0, 0, 0, 128));
+	for (size_t i = 0; i < 2; i++)
+	{
+		sf::RectangleShape *shape = new sf::RectangleShape(sf::Vector2f(300.f, 80.f));
+		shape->setFillColor(sf::Color(0, 64, 192, 255));
+		shape->setOutlineColor(sf::Color(255, 255, 255, 255));
+		shape->setOutlineThickness(-5.f);
+		m_Buttons[i] = new UIButton(sf::IntRect(0, 0, 300, 80), "", GetBasicFont(), shape);
+		m_Buttons[i]->SetPosition(sf::Vector2f(450.f, (i + 4) * 100.f));
+	}
+	m_Buttons[0]->SetString("Back to Game");
+	m_Buttons[1]->SetString("Exit Game");
+}
+
+void GameBehavior::PausePlayState::Exit(bool finalization)
+{
+	delete m_Background;
+	delete m_Buttons[0];
+	delete m_Buttons[1];
+}
+
+bool GameBehavior::PausePlayState::Update(float dt)
+{
+	if (InputManager::GetInstance().GetInput(MOUSELEFTCLICK))
+	{
+		for each (UIButton *b in m_Buttons)
+		{
+			if (b->GetMouseover(GetMouseScreenPosition()))
+			{
+				sf::String buttonString = b->GetString();
+				if (buttonString == "Back to Game")
+					m_GameBehavior->TogglePause();
+				else
+					m_GameBehavior->ExitGame();
+				break;
+			}
+		}
+	}
+	return true;
+}
+
+bool GameBehavior::PausePlayState::Render()
+{
+	GetWindow()->draw(*m_Background);
 	for each (UIButton *b in m_Buttons)
 	{
 		b->Render(m_GameBehavior->m_Window);
