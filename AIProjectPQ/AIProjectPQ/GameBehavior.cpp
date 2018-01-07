@@ -1,6 +1,7 @@
 #include "GameBehavior.h"
 #include "InputManager.h"
 #include <iostream>
+#include "PieceBehavior.h"
 
 GameBehavior::GameBehavior()
 {
@@ -563,6 +564,7 @@ GameBehavior::PlayGameState::PlayGameState(State *parentState, GameBehavior *gam
 {
 	m_Paused = false;
 	m_ChildState = new PausePlayState(parentState, gameBehavior);
+	m_Board = new Board();
 }
 
 void GameBehavior::PlayGameState::Enter(bool initialization)
@@ -574,6 +576,7 @@ void GameBehavior::PlayGameState::Exit(bool finalization)
 {
 	m_ChildState->Exit(finalization);
 	delete m_ChildState;
+	delete m_Board;
 }
 
 bool GameBehavior::PlayGameState::TogglePause()
@@ -584,15 +587,20 @@ bool GameBehavior::PlayGameState::TogglePause()
 
 bool GameBehavior::PlayGameState::Update(float dt)
 {
-	if (InputManager::GetInstance().GetInput(RETURN))
+	if (InputManager::GetInstance().GetInput(ESCCLICK))
 		TogglePause();
 	if (m_Paused) return m_ChildState->Update(dt);
-	else return true;
+	else
+	{
+
+		m_Board->Update(dt);
+		return true;
+	}
 }
 
 bool GameBehavior::PlayGameState::Render()
 {
-
+	m_Board->Render(GetWindow());
 	if (m_Paused) return m_ChildState->Render();
 	else return true;
 }

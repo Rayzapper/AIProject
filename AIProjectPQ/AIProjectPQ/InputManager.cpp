@@ -32,7 +32,15 @@ void InputManager::Update()
 			m_MouseMiddleClick = true;
 		m_Click = true;
 	}
-	if (!m_MouseLeft && !m_MouseRight && !m_MouseMiddle)
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
+	{
+		m_Any = true;
+		m_Esc = true;
+		if (!m_Click)
+			m_EscClick = true;
+		m_Click = true;
+	}
+	if (!m_MouseLeft && !m_MouseRight && !m_MouseMiddle && !m_Esc)
 		m_Click = false;
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Return)) m_Return = true, m_Any = true;
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) m_Space = true, m_Any = true;
@@ -71,6 +79,8 @@ void InputManager::Clear()
 	m_Right = false;
 	m_O = false;
 	m_Any = false;
+	m_Esc = false;
+	m_EscClick = false;
 	m_MouseWheelValue = 0;
 }
 
@@ -106,6 +116,8 @@ bool InputManager::GetInput(Input input) const
 	else if (input == KEYRIGHT) return m_Right;
 	else if (input == KEYO) return m_O;
 	else if (input == KEYANY) return m_Any;
+	else if (input == ESC) return m_Esc;
+	else if (input == ESCCLICK) return m_EscClick;
 	else return false;
 }
 

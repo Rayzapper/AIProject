@@ -16,11 +16,6 @@ GameObject::~GameObject()
 	delete m_Shape;
 }
 
-void GameObject::Update(float dt)
-{
-
-}
-
 void GameObject::Render(sf::RenderWindow *window)
 {
 	if (m_RenderMode) RenderSprite(window);
@@ -52,4 +47,16 @@ void GameObject::SetPosition(sf::Vector2f position)
 void GameObject::SetTexture(sf::Texture *texture)
 {
 	m_Sprite.setTexture(*texture, true);
+}
+
+void GameObject::SetShape(sf::Shape *drawShape)
+{
+	m_Shape = drawShape;
+}
+
+void GameObject::OffsetPosition(sf::Vector2f offset)
+{
+	sf::Vector2f newPos = m_Position;
+	newPos += offset;
+	SetPosition(newPos);
 }

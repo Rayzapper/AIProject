@@ -3,7 +3,7 @@
 
 #include <SFML\Graphics.hpp>
 #include "UIButton.h"
-#include "WorldManager.h"
+#include "Board.h"
 
 using namespace std;
 
@@ -153,7 +153,7 @@ private:
 		virtual bool Render();
 	private:
 		bool m_Paused;
-		WorldManager *m_WorldManager;
+		Board *m_Board;
 	};
 
 	class PausePlayState : public LeafState

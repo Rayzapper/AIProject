@@ -24,7 +24,9 @@ enum Input
 	KEYDOWN,
 	KEYRIGHT,
 	KEYO,
-	KEYANY
+	KEYANY,
+	ESC,
+	ESCCLICK
 };
 
 class InputManager
@@ -45,7 +47,7 @@ private:
 		m_W = false, m_A = false, m_S = false, m_D = false,
 		m_Up = false, m_Left = false, m_Down = false, m_Right = false,
 		m_O = false,
-		m_Space = false,
+		m_Space = false, m_Esc = false, m_EscClick = false,
 		m_Any = false;
 	bool m_Click = false;
 	int m_MouseWheelValue = 0;

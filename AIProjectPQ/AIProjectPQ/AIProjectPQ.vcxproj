@@ -120,23 +120,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Board.cpp" />
     <ClCompile Include="GameBehavior.cpp" />
     <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Piece.cpp" />
+    <ClCompile Include="PieceBehavior.cpp" />
     <ClCompile Include="UIButton.cpp" />
-    <ClCompile Include="GameActor.cpp" />
-    <ClCompile Include="ActorBehavior.cpp" />
-    <ClCompile Include="WorldManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Board.h" />
     <ClInclude Include="GameBehavior.h" />
     <ClInclude Include="GameObject.h" />
     <ClInclude Include="InputManager.h" />
+    <ClInclude Include="Piece.h" />
+    <ClInclude Include="PieceBehavior.h" />
     <ClInclude Include="UIButton.h" />
-    <ClInclude Include="GameActor.h" />
-    <ClInclude Include="ActorBehavior.h" />
-    <ClInclude Include="WorldManager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
