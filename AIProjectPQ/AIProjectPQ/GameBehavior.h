@@ -14,11 +14,18 @@ public:
 	~GameBehavior();
 	void Run();
 private:
-	void StartGame();
+	void StartGame(bool AI);
 	void MainMenu();
 	void OptionsMenu();
 	void ExitGame();
 	void TogglePause();
+	virtual void ChangeTurn();
+	virtual bool GetAI();
+	virtual size_t GetCurrentTurn();
+	virtual int GetPlayerHealth(size_t index);
+	virtual bool GetPlayerWaiting(size_t index);
+	virtual void SetPlayerWaiting(size_t index, bool waiting);
+	virtual void OffsetPlayerHealth(size_t index, int offset);
 
 	class State
 	{
@@ -26,10 +33,17 @@ private:
 		virtual void Transit(State *to, State *from) = 0;
 		virtual void Enter(bool initialization) = 0;
 		virtual void Exit(bool finalization) = 0;
-		virtual bool StartGame() = 0;
+		virtual bool StartGame(bool AI) = 0;
 		virtual bool MainMenu() = 0;
 		virtual bool OptionsMenu() = 0;
 		virtual bool TogglePause() = 0;
+		virtual void ChangeTurn() = 0;
+		virtual bool GetAI() = 0;
+		virtual size_t GetCurrentTurn() = 0;
+		virtual int GetPlayerHealth(size_t index) = 0;
+		virtual bool GetPlayerWaiting(size_t index) = 0;
+		virtual void SetPlayerWaiting(size_t index, bool waiting) = 0;
+		virtual void OffsetPlayerHealth(size_t index, int offset) = 0;
 		virtual bool Update(float dt) = 0;
 		virtual bool Render() = 0;
 
@@ -48,10 +62,17 @@ private:
 		virtual void Transit(State *from, State *to);
 		virtual void Enter(bool initialization);
 		virtual void Exit(bool finalization);
-		virtual bool StartGame();
+		virtual bool StartGame(bool AI);
 		virtual bool MainMenu();
 		virtual bool OptionsMenu();
 		virtual bool TogglePause();
+		virtual void ChangeTurn();
+		virtual bool GetAI();
+		virtual size_t GetCurrentTurn();
+		virtual int GetPlayerHealth(size_t index);
+		virtual bool GetPlayerWaiting(size_t index);
+		virtual void SetPlayerWaiting(size_t index, bool waiting);
+		virtual void OffsetPlayerHealth(size_t index, int offset);
 		virtual bool Update(float dt);
 		virtual bool Render();
 	protected:
@@ -65,10 +86,17 @@ private:
 		virtual void Transit(State *from, State *to);
 		virtual void Enter(bool initialization);
 		virtual void Exit(bool finalization);
-		virtual bool StartGame();
+		virtual bool StartGame(bool AI);
 		virtual bool MainMenu();
 		virtual bool OptionsMenu();
 		virtual bool TogglePause();
+		virtual void ChangeTurn();
+		virtual bool GetAI();
+		virtual size_t GetCurrentTurn();
+		virtual int GetPlayerHealth(size_t index);
+		virtual bool GetPlayerWaiting(size_t index);
+		virtual void SetPlayerWaiting(size_t index, bool waiting);
+		virtual void OffsetPlayerHealth(size_t index, int offset);
 		virtual bool Update(float dt);
 		virtual bool Render();
 	protected:
@@ -82,10 +110,17 @@ private:
 		virtual void Transit(State *from, State *to);
 		virtual void Enter(bool initialization);
 		virtual void Exit(bool finalization);
-		virtual bool StartGame();
+		virtual bool StartGame(bool AI);
 		virtual bool MainMenu();
 		virtual bool OptionsMenu();
 		virtual bool TogglePause();
+		virtual void ChangeTurn();
+		virtual bool GetAI();
+		virtual size_t GetCurrentTurn();
+		virtual int GetPlayerHealth(size_t index);
+		virtual bool GetPlayerWaiting(size_t index);
+		virtual void SetPlayerWaiting(size_t index, bool waiting);
+		virtual void OffsetPlayerHealth(size_t index, int offset);
 		virtual bool Update(float dt);
 		virtual bool Render();
 	protected:
@@ -96,7 +131,8 @@ private:
 	{
 	public:
 		GameState(State *parentState, GameBehavior *gameBehavior);
-		virtual bool StartGame();
+		virtual bool StartGame(bool AI);
+		virtual bool MainMenu();
 	};
 
 	class MenuGameState : public DecoratedState
@@ -127,7 +163,7 @@ private:
 		virtual bool Update(float dt);
 		virtual bool Render();
 	private:
-		UIButton *m_Buttons[3];
+		UIButton *m_Buttons[4];
 	};
 
 	class OptionsMenuState : public LeafState
@@ -142,18 +178,27 @@ private:
 		UIButton *m_Buttons[3];
 	};
 
-	class PlayGameState : public DecoratedState
+	class PlayGameState : public CompositeState
 	{
 	public:
-		PlayGameState(State *parentState, GameBehavior *gameBehavior);
+		PlayGameState(State *parentState, GameBehavior *gameBehavior, bool AI);
 		virtual void Enter(bool initialization);
 		virtual void Exit(bool finalization);
 		virtual bool TogglePause();
+		virtual void ChangeTurn();
+		virtual bool GetAI();
+		virtual size_t GetCurrentTurn();
+		virtual int GetPlayerHealth(size_t index);
+		virtual bool GetPlayerWaiting(size_t index);
+		virtual void SetPlayerWaiting(size_t index, bool waiting);
+		virtual void OffsetPlayerHealth(size_t index, int offset);
 		virtual bool Update(float dt);
 		virtual bool Render();
 	private:
 		bool m_Paused;
 		Board *m_Board;
+		sf::RectangleShape m_SelectionShape;
+		Slot *m_SelectedSlot;
 	};
 
 	class PausePlayState : public LeafState
@@ -164,8 +209,26 @@ private:
 		virtual bool Update(float dt);
 		virtual bool Render();
 	private:
-		UIButton *m_Buttons[2];
+		UIButton *m_Buttons[3];
 		sf::RectangleShape *m_Background;
+	};
+
+	class PlayerState : public LeafState
+	{
+	public:
+		PlayerState(State *parentState, GameBehavior *gameBehavior, bool AI);
+		virtual void ChangeTurn();
+		virtual bool GetAI();
+		virtual size_t GetCurrentTurn();
+		virtual int GetPlayerHealth(size_t index);
+		virtual bool GetPlayerWaiting(size_t index);
+		virtual void SetPlayerWaiting(size_t index, bool waiting);
+		virtual void OffsetPlayerHealth(size_t index, int offset);
+	private:
+		size_t m_CurrentPlayerTurn;
+		bool m_AI;
+		int m_PlayerHealth[2];
+		bool m_PlayerWaiting[2];
 	};
 
 	void Update(float dt);

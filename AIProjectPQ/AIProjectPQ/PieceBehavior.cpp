@@ -556,7 +556,7 @@ bool PieceBehavior::MovingState::MovingMotion(sf::Vector2f targetPosition)
 
 bool PieceBehavior::MovingState::Update(float dt)
 {
-	m_Speed += dt * 9.82f;
+	m_Speed += dt * 9.82f * 2;
 	OffsetPiecePosition(m_DeltaVector * m_Speed);
 	m_Length -= m_Speed;
 	if (m_Length <= 0)
@@ -583,7 +583,7 @@ bool PieceBehavior::FallingState::FallingMotion(float targetHeight)
 
 bool PieceBehavior::FallingState::Update(float dt)
 {
-	m_Speed += dt * 9.82f;
+	m_Speed += dt * 9.82f * 2;
 	OffsetPiecePosition(sf::Vector2f(0.f, m_Speed));
 	sf::Vector2f currentPosition = GetPiecePosition();
 	if (currentPosition.y >= m_TargetHeight)

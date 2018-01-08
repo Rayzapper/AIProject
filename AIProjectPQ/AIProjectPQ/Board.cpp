@@ -32,6 +32,12 @@ Board::Board()
 		{
 			m_BoardSlots[y][x] = new Slot(new sf::RectangleShape(slotShape));
 			m_BoardSlots[y][x]->SetPosition(sf::Vector2f(250.f + x * 100.f, 50.f + y * 100.f));
+		}
+	}
+	for (size_t y = 0; y < 8; y++)
+	{
+		for (size_t x = 0; x < 8; x++)
+		{
 			if (x < 7)
 				m_BoardSlots[y][x]->SetNeighbor(m_BoardSlots[y][x + 1], 0);
 			if (y < 7)
@@ -109,43 +115,22 @@ void Board::GenerateBoard()
 	}
 }
 
-void Board::SwapPiece(size_t indexY, size_t indexX, int direction)
+void Board::SwapPieces(Slot *slotFrom, Slot *slotTo)
 {
-	PieceBehavior *temp = m_BoardSlots[indexY][indexX]->GetPiece();
-	if (direction = 0)
-	{
-		m_BoardSlots[indexY][indexX]->SetPiece(m_BoardSlots[indexY][indexX + 1]->GetPiece());
-		m_BoardSlots[indexY][indexX + 1]->SetPiece(temp);
-	}
-	else if (direction = 1)
-	{
-		m_BoardSlots[indexY][indexX]->SetPiece(m_BoardSlots[indexY + 1][indexX]->GetPiece());
-		m_BoardSlots[indexY + 1][indexX]->SetPiece(temp);
-	}
-	else if (direction = 2)
-	{
-		m_BoardSlots[indexY][indexX]->SetPiece(m_BoardSlots[indexY][indexX - 1]->GetPiece());
-		m_BoardSlots[indexY][indexX - 1]->SetPiece(temp);
-	}
-	else
-	{
-		m_BoardSlots[indexY][indexX]->SetPiece(m_BoardSlots[indexY - 1][indexX]->GetPiece());
-		m_BoardSlots[indexY - 1][indexX]->SetPiece(temp);
-	}
+	PieceBehavior *temp = slotFrom->GetPiece();
+	slotFrom->SetPiece(slotTo->GetPiece());
+	slotTo->SetPiece(temp);
+	slotFrom->GetPiece()->MovingMotion(slotFrom->GetPosition());
+	slotTo->GetPiece()->MovingMotion(slotTo->GetPosition());
 }
 
-sf::IntRect Board::GetSlotHitbox(size_t indexY, size_t indexX)
+Slot* Board::GetSlot(size_t indexY, size_t indexX)
 {
-	return m_BoardSlots[indexY][indexX]->GetHitbox();
-}
-
-PieceBehavior* Board::GetPiece(size_t indexY, size_t indexX)
-{
-	return m_BoardSlots[indexY][indexX]->GetPiece();
+	return m_BoardSlots[indexY][indexX];
 }
 
 
-Board::Slot::Slot(sf::Shape *drawShape)
+Slot::Slot(sf::Shape *drawShape)
 	: GameObject(drawShape)
 {
 	m_Piece = new PieceBehavior();
@@ -156,27 +141,32 @@ Board::Slot::Slot(sf::Shape *drawShape)
 	m_Hitbox.height = 100;
 }
 
-Board::Slot::~Slot()
+Slot::~Slot()
 {
 	delete m_Piece;
 }
 
-void Board::Slot::SetNeighbor(Slot *slot, size_t index)
+void Slot::SetNeighbor(Slot *slot, size_t index)
 {
 	m_NeighborSlots[index] = slot;
 }
 
-sf::IntRect Board::Slot::GetHitbox()
+sf::IntRect Slot::GetHitbox()
 {
 	return m_Hitbox;
 }
 
-PieceBehavior* Board::Slot::GetPiece()
+PieceBehavior* Slot::GetPiece()
 {
 	return m_Piece;
 }
 
-void Board::Slot::SetPosition(sf::Vector2f position)
+Slot* Slot::GetNeighbor(size_t index)
+{
+	return m_NeighborSlots[index];
+}
+
+void Slot::SetPosition(sf::Vector2f position)
 {
 	m_Position = position;
 	m_Sprite.setPosition(position);
@@ -185,12 +175,17 @@ void Board::Slot::SetPosition(sf::Vector2f position)
 	if (m_Shape != nullptr) m_Shape->setPosition(position);
 }
 
-void Board::Slot::SetHitbox(sf::IntRect hitbox)
+void Slot::SetHitbox(sf::IntRect hitbox)
 {
 	m_Hitbox = hitbox;
 }
 
-void Board::Slot::SetPiece(PieceBehavior *piece)
+void Slot::SetPiece(PieceBehavior *piece)
 {
 	m_Piece = piece;
+}
+
+bool Slot::GetMouseover(sf::Vector2i mouseScreenPosition)
+{
+	return m_Hitbox.contains(mouseScreenPosition);
 }
