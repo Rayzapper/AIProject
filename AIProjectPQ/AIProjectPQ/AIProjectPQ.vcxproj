@@ -125,6 +125,7 @@
     <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MinMaxAI.cpp" />
     <ClCompile Include="Piece.cpp" />
     <ClCompile Include="PieceBehavior.cpp" />
     <ClCompile Include="UIButton.cpp" />
@@ -134,6 +135,7 @@
     <ClInclude Include="GameBehavior.h" />
     <ClInclude Include="GameObject.h" />
     <ClInclude Include="InputManager.h" />
+    <ClInclude Include="MinMaxAI.h" />
     <ClInclude Include="Piece.h" />
     <ClInclude Include="PieceBehavior.h" />
     <ClInclude Include="UIButton.h" />

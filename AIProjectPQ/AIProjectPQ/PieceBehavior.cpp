@@ -12,19 +12,9 @@ PieceBehavior::~PieceBehavior()
 	delete m_Piece;
 }
 
-void PieceBehavior::CreationPhase()
-{
-	m_PieceState->CreationPhase();
-}
-
 void PieceBehavior::AlivePhase()
 {
 	m_PieceState->AlivePhase();
-}
-
-void PieceBehavior::DestructionPhase()
-{
-	m_PieceState->DestructionPhase();
 }
 
 void PieceBehavior::DeadPhase()
@@ -40,6 +30,11 @@ void PieceBehavior::IdleMotion()
 void PieceBehavior::MovingMotion(sf::Vector2f targetPosition)
 {
 	m_PieceState->MovingMotion(targetPosition);
+}
+
+void PieceBehavior::IllegalMotion(sf::Vector2f targetPosition)
+{
+	m_PieceState->IllegalMotion(targetPosition);
 }
 
 void PieceBehavior::FallingMotion(float targetHeight)
@@ -62,9 +57,29 @@ Piece* PieceBehavior::GetPiece()
 	return m_Piece;
 }
 
+int PieceBehavior::GetPieceType()
+{
+	return m_Piece->GetType();
+}
+
+bool PieceBehavior::GetDead()
+{
+	return m_PieceState->GetDead();
+}
+
+bool PieceBehavior::Moving()
+{
+	return m_PieceState->Moving();
+}
+
 void PieceBehavior::SetPiece(Piece *piece)
 {
 	m_Piece = piece;
+}
+
+void PieceBehavior::SetPieceType(int type)
+{
+	m_Piece->SetType(type);
 }
 
 
@@ -130,34 +145,12 @@ void PieceBehavior::CompositeState::Exit(bool finalization)
 	m_ChildStates.clear();
 }
 
-bool PieceBehavior::CompositeState::CreationPhase()
-{
-	bool handled = false;
-	for each (State *s in m_ChildStates)
-	{
-		if (s->CreationPhase())
-			handled = true;
-	}
-	return handled;
-}
-
 bool PieceBehavior::CompositeState::AlivePhase()
 {
 	bool handled = false;
 	for each (State *s in m_ChildStates)
 	{
 		if (s->AlivePhase())
-			handled = true;
-	}
-	return handled;
-}
-
-bool PieceBehavior::CompositeState::DestructionPhase()
-{
-	bool handled = false;
-	for each (State *s in m_ChildStates)
-	{
-		if (s->DestructionPhase())
 			handled = true;
 	}
 	return handled;
@@ -196,6 +189,17 @@ bool PieceBehavior::CompositeState::MovingMotion(sf::Vector2f targetPosition)
 	return handled;
 }
 
+bool PieceBehavior::CompositeState::IllegalMotion(sf::Vector2f targetPosition)
+{
+	bool handled = false;
+	for each (State *s in m_ChildStates)
+	{
+		if (s->IllegalMotion(targetPosition))
+			handled = true;
+	}
+	return handled;
+}
+
 bool PieceBehavior::CompositeState::FallingMotion(float targetHeight)
 {
 	bool handled = false;
@@ -224,6 +228,28 @@ bool PieceBehavior::CompositeState::Render(sf::RenderWindow *window)
 	for each (State *s in m_ChildStates)
 	{
 		if (s->Render(window))
+			handled = true;
+	}
+	return handled;
+}
+
+bool PieceBehavior::CompositeState::Moving()
+{
+	bool handled = false;
+	for each (State *s in m_ChildStates)
+	{
+		if (s->Moving())
+			handled = true;
+	}
+	return handled;
+}
+
+bool PieceBehavior::CompositeState::GetDead()
+{
+	bool handled = false;
+	for each (State *s in m_ChildStates)
+	{
+		if (s->GetDead())
 			handled = true;
 	}
 	return handled;
@@ -262,19 +288,9 @@ void PieceBehavior::DecoratedState::Exit(bool finalization)
 	delete m_ChildState;
 }
 
-bool PieceBehavior::DecoratedState::CreationPhase()
-{
-	return m_ChildState->CreationPhase();
-}
-
 bool PieceBehavior::DecoratedState::AlivePhase()
 {
 	return m_ChildState->AlivePhase();
-}
-
-bool PieceBehavior::DecoratedState::DestructionPhase()
-{
-	return m_ChildState->DestructionPhase();
 }
 
 bool PieceBehavior::DecoratedState::DeadPhase()
@@ -292,6 +308,11 @@ bool PieceBehavior::DecoratedState::MovingMotion(sf::Vector2f targetPosition)
 	return m_ChildState->MovingMotion(targetPosition);
 }
 
+bool PieceBehavior::DecoratedState::IllegalMotion(sf::Vector2f targetPosition)
+{
+	return m_ChildState->IllegalMotion(targetPosition);
+}
+
 bool PieceBehavior::DecoratedState::FallingMotion(float targetHeight)
 {
 	return m_ChildState->FallingMotion(targetHeight);
@@ -305,6 +326,16 @@ bool PieceBehavior::DecoratedState::Update(float dt)
 bool PieceBehavior::DecoratedState::Render(sf::RenderWindow *window)
 {
 	return m_ChildState->Render(window);
+}
+
+bool PieceBehavior::DecoratedState::Moving()
+{
+	return m_ChildState->Moving();
+}
+
+bool PieceBehavior::DecoratedState::GetDead()
+{
+	return m_ChildState->GetDead();
 }
 
 PieceBehavior::DecoratedState::DecoratedState(State *parentState, PieceBehavior *pieceBehavior)
@@ -323,17 +354,7 @@ void PieceBehavior::LeafState::Enter(bool initialization) {}
 
 void PieceBehavior::LeafState::Exit(bool finalization) {}
 
-bool PieceBehavior::LeafState::CreationPhase()
-{
-	return false;
-}
-
 bool PieceBehavior::LeafState::AlivePhase()
-{
-	return false;
-}
-
-bool PieceBehavior::LeafState::DestructionPhase()
 {
 	return false;
 }
@@ -353,6 +374,11 @@ bool PieceBehavior::LeafState::MovingMotion(sf::Vector2f targetPosition)
 	return false;
 }
 
+bool PieceBehavior::LeafState::IllegalMotion(sf::Vector2f targetPosition)
+{
+	return false;
+}
+
 bool PieceBehavior::LeafState::FallingMotion(float targetHeight)
 {
 	return false;
@@ -364,6 +390,16 @@ bool PieceBehavior::LeafState::Update(float dt)
 }
 
 bool PieceBehavior::LeafState::Render(sf::RenderWindow *window)
+{
+	return false;
+}
+
+bool PieceBehavior::LeafState::Moving()
+{
+	return false;
+}
+
+bool PieceBehavior::LeafState::GetDead()
 {
 	return false;
 }
@@ -396,17 +432,7 @@ bool PieceBehavior::PieceState::Render(sf::RenderWindow *window)
 PieceBehavior::PhaseState::PhaseState(State *parentState, PieceBehavior *pieceBehavior)
 	: DecoratedState(parentState, pieceBehavior)
 {
-	m_ChildState = new CreationState(this, pieceBehavior);
-}
-
-bool PieceBehavior::PhaseState::CreationPhase()
-{
-	if (!m_ChildState->CreationPhase())
-	{
-		Transit(m_ChildState, new CreationState(this, m_PieceBehavior));
-		m_ChildState->CreationPhase();
-	}
-	return true;
+	m_ChildState = new AliveState(this, pieceBehavior);
 }
 
 bool PieceBehavior::PhaseState::AlivePhase()
@@ -419,16 +445,6 @@ bool PieceBehavior::PhaseState::AlivePhase()
 	return true;
 }
 
-bool PieceBehavior::PhaseState::DestructionPhase()
-{
-	if (!m_ChildState->DestructionPhase())
-	{
-		Transit(m_ChildState, new DestructionState(this, m_PieceBehavior));
-		m_ChildState->DestructionPhase();
-	}
-	return true;
-}
-
 bool PieceBehavior::PhaseState::DeadPhase()
 {
 	if (!m_ChildState->DeadPhase())
@@ -436,18 +452,6 @@ bool PieceBehavior::PhaseState::DeadPhase()
 		Transit(m_ChildState, new DeadState(this, m_PieceBehavior));
 		m_ChildState->DeadPhase();
 	}
-	return true;
-}
-
-
-PieceBehavior::CreationState::CreationState(State *parentState, PieceBehavior *pieceBehavior)
-	: LeafState(parentState, pieceBehavior)
-{
-
-}
-
-bool PieceBehavior::CreationState::CreationPhase()
-{
 	return true;
 }
 
@@ -464,18 +468,6 @@ bool PieceBehavior::AliveState::AlivePhase()
 }
 
 
-PieceBehavior::DestructionState::DestructionState(State *parentState, PieceBehavior *pieceBehavior)
-	: LeafState(parentState, pieceBehavior)
-{
-
-}
-
-bool PieceBehavior::DestructionState::DestructionPhase()
-{
-	return true;
-}
-
-
 PieceBehavior::DeadState::DeadState(State *parentState, PieceBehavior *pieceBehavior)
 	: LeafState(parentState, pieceBehavior)
 {
@@ -483,6 +475,11 @@ PieceBehavior::DeadState::DeadState(State *parentState, PieceBehavior *pieceBeha
 }
 
 bool PieceBehavior::DeadState::DeadPhase()
+{
+	return true;
+}
+
+bool PieceBehavior::DeadState::GetDead()
 {
 	return true;
 }
@@ -510,6 +507,16 @@ bool PieceBehavior::MotionState::MovingMotion(sf::Vector2f targetPosition)
 	{
 		Transit(m_ChildState, new MovingState(this, m_PieceBehavior));
 		m_ChildState->MovingMotion(targetPosition);
+	}
+	return true;
+}
+
+bool PieceBehavior::MotionState::IllegalMotion(sf::Vector2f targetPosition)
+{
+	if (!m_ChildState->IllegalMotion(targetPosition))
+	{
+		Transit(m_ChildState, new IllegalMovementState(this, m_PieceBehavior));
+		m_ChildState->IllegalMotion(targetPosition);
 	}
 	return true;
 }
@@ -546,7 +553,6 @@ PieceBehavior::MovingState::MovingState(State *parentState, PieceBehavior *piece
 bool PieceBehavior::MovingState::MovingMotion(sf::Vector2f targetPosition)
 {
 	m_TargetPosition = targetPosition;
-	m_Speed = 0.f;
 	m_DeltaVector = m_TargetPosition - GetPiecePosition();
 	m_Length = sqrtf(m_DeltaVector.x * m_DeltaVector.x + m_DeltaVector.y * m_DeltaVector.y);
 	m_DeltaVector.x /= m_Length;
@@ -556,14 +562,67 @@ bool PieceBehavior::MovingState::MovingMotion(sf::Vector2f targetPosition)
 
 bool PieceBehavior::MovingState::Update(float dt)
 {
-	m_Speed += dt * 9.82f * 2;
-	OffsetPiecePosition(m_DeltaVector * m_Speed);
-	m_Length -= m_Speed;
+	float speed = 4.f * dt * 60;
+	OffsetPiecePosition(m_DeltaVector * speed);
+	m_Length -= speed;
 	if (m_Length <= 0)
 	{
 		SetPiecePosition(m_TargetPosition);
 		m_PieceBehavior->IdleMotion();
 	}
+	return true;
+}
+
+bool PieceBehavior::MovingState::Moving()
+{
+	return true;
+}
+
+
+PieceBehavior::IllegalMovementState::IllegalMovementState(State *parentState, PieceBehavior *pieceBehavior)
+	: LeafState(parentState, pieceBehavior)
+{
+
+}
+
+bool PieceBehavior::IllegalMovementState::IllegalMotion(sf::Vector2f targetPosition)
+{
+	m_TargetPosition = targetPosition;
+	m_StartPosition = GetPiecePosition();
+	m_DeltaVector = m_TargetPosition - GetPiecePosition();
+	m_Length = sqrtf(m_DeltaVector.x * m_DeltaVector.x + m_DeltaVector.y * m_DeltaVector.y);
+	m_DeltaVector.x /= m_Length;
+	m_DeltaVector.y /= m_Length;
+	m_Distance = m_Length;
+	m_To = true;
+	return true;
+}
+
+bool PieceBehavior::IllegalMovementState::Update(float dt)
+{
+	float speed = 4.f * dt * 60;
+	if (m_To)
+	{
+		OffsetPiecePosition(m_DeltaVector * speed);
+		m_Length -= speed;
+		if (m_Length <= (m_Distance / 4) * 3)
+			m_To = false;
+	}
+	else
+	{
+		OffsetPiecePosition(-m_DeltaVector * speed);
+		m_Length += speed;
+		if (m_Length >= m_Distance)
+		{
+			SetPiecePosition(m_StartPosition);
+			m_PieceBehavior->IdleMotion();
+		}
+	}
+	return true;
+}
+
+bool PieceBehavior::IllegalMovementState::Moving()
+{
 	return true;
 }
 
@@ -592,5 +651,10 @@ bool PieceBehavior::FallingState::Update(float dt)
 		SetPiecePosition(currentPosition);
 		m_PieceBehavior->IdleMotion();
 	}
+	return true;
+}
+
+bool PieceBehavior::FallingState::Moving()
+{
 	return true;
 }

@@ -109,10 +109,242 @@ void Board::GenerateBoard()
 			}
 			Piece *piece = new Piece(new sf::CircleShape(*dynamic_cast<sf::CircleShape*>(m_PieceShapes[(size_t)types[y][x]])));
 			piece->SetPosition(sf::Vector2f(250.f + x * 100.f, y * 100.f - 750.f - x * 100.f));
+			piece->SetType(types[y][x]);
+			delete m_BoardSlots[y][x]->GetPiece();
+			m_BoardSlots[y][x]->SetPiece(new PieceBehavior());
 			m_BoardSlots[y][x]->GetPiece()->SetPiece(piece);
 			m_BoardSlots[y][x]->GetPiece()->FallingMotion(50.f + y * 100.f);
 		}
 	}
+}
+
+bool Board::PiecesMoving()
+{
+	bool moving = false;
+	for (size_t y = 0; y < 8; y++)
+	{
+		for (size_t x = 0; x < 8; x++)
+		{
+			if (m_BoardSlots[y][x]->GetPiece()->Moving())
+				moving = true;
+		}
+	}
+	return moving;
+}
+
+bool Board::RowMatchPossible(size_t y)
+{
+	int id;
+	for (size_t x = 0; x < 6; x++)
+	{
+		id = m_BoardSlots[y][x]->GetPiece()->GetPieceType();
+		if (m_BoardSlots[y][x + 1]->GetPiece()->GetPieceType() == id)
+		{
+			for (size_t j = 0; j < 4; j++)
+			{
+				if (j != 2)
+				{
+					Slot *neighbor = m_BoardSlots[y][x + 2]->GetNeighbor(j);
+					if (neighbor != nullptr)
+					{
+						if (neighbor->GetPiece()->GetPieceType() == id)
+							return true;
+					}
+				}
+			}
+		}
+	}
+	for (size_t i = 0; i < 6; i++)
+	{
+		size_t x = 7 - i;
+		id = m_BoardSlots[y][x]->GetPiece()->GetPieceType();
+		if (m_BoardSlots[y][x - 1]->GetPiece()->GetPieceType() == id)
+		{
+			for (size_t j = 0; j < 4; j++)
+			{
+				if (j != 0)
+				{
+					Slot *neighbor = m_BoardSlots[y][x - 2]->GetNeighbor(j);
+					if (neighbor != nullptr)
+					{
+						if (neighbor->GetPiece()->GetPieceType() == id)
+							return true;
+					}
+				}
+			}
+		}
+	}
+	for (size_t x = 0; x < 6; x++)
+	{
+		id = m_BoardSlots[y][x]->GetPiece()->GetPieceType();
+		if (m_BoardSlots[y][x + 2]->GetPiece()->GetPieceType() == id)
+		{
+			for (size_t j = 0; j < 4; j++)
+			{
+				if (j != 0 && j != 2)
+				{
+					Slot *neighbor = m_BoardSlots[y][x + 1]->GetNeighbor(j);
+					if (neighbor != nullptr)
+					{
+						if (neighbor->GetPiece()->GetPieceType() == id)
+							return true;
+					}
+				}
+			}
+		}
+	}
+	return false;
+}
+
+bool Board::CollumnMatchPossible(size_t x)
+{
+	int id;
+	for (size_t y = 0; y < 6; y++)
+	{
+		id = m_BoardSlots[y][x]->GetPiece()->GetPieceType();
+		if (m_BoardSlots[y + 1][x]->GetPiece()->GetPieceType() == id)
+		{
+			for (size_t j = 0; j < 4; j++)
+			{
+				if (j != 3)
+				{
+					Slot *neighbor = m_BoardSlots[y + 2][x]->GetNeighbor(j);
+					if (neighbor != nullptr)
+					{
+						if (neighbor->GetPiece()->GetPieceType() == id)
+							return true;
+					}
+				}
+			}
+		}
+	}
+	for (size_t i = 0; i < 6; i++)
+	{
+		size_t y = 7 - i;
+		id = m_BoardSlots[y][x]->GetPiece()->GetPieceType();
+		if (m_BoardSlots[y - 1][x]->GetPiece()->GetPieceType() == id)
+		{
+			for (size_t j = 0; j < 4; j++)
+			{
+				if (j != 1)
+				{
+					Slot *neighbor = m_BoardSlots[y - 2][x]->GetNeighbor(j);
+					if (neighbor != nullptr)
+					{
+						if (neighbor->GetPiece()->GetPieceType() == id)
+							return true;
+					}
+				}
+			}
+		}
+	}
+	for (size_t y = 0; y < 6; y++)
+	{
+		id = m_BoardSlots[y][x]->GetPiece()->GetPieceType();
+		if (m_BoardSlots[y + 2][x]->GetPiece()->GetPieceType() == id)
+		{
+			for (size_t j = 0; j < 4; j++)
+			{
+				if (j != 1 && j != 3)
+				{
+					Slot *neighbor = m_BoardSlots[y + 1][x]->GetNeighbor(j);
+					if (neighbor != nullptr)
+					{
+						if (neighbor->GetPiece()->GetPieceType() == id)
+							return true;
+					}
+				}
+			}
+		}
+	}
+	return false;
+}
+
+bool Board::MatchPossible()
+{
+	for (size_t y = 0; y < 8; y++)
+	{
+		if (RowMatchPossible(y))
+			return true;
+	}
+	for (size_t x = 0; x < 8; x++)
+	{
+		if (CollumnMatchPossible(x))
+			return true;
+	}
+	return false;
+}
+
+vector<vector<Slot*>> Board::GetRowMatches(size_t y)
+{
+	vector<vector<Slot*>> matches;
+	for (size_t x = 0; x < 6; x++)
+	{
+		vector<Slot*> match;
+		int id = m_BoardSlots[y][x]->GetPiece()->GetPieceType();
+		match.push_back(m_BoardSlots[y][x]);
+		while (match.back()->GetNeighbor(0)->GetPiece()->GetPieceType() == id)
+		{
+			x++;
+			match.push_back(match.back()->GetNeighbor(0));
+			if (match.back()->GetNeighbor(0) == nullptr)
+				break;
+		}
+		if (match.size() > 2) matches.push_back(match);
+	}
+	return matches;
+}
+
+vector<vector<Slot*>> Board::GetCollumnMatches(size_t x)
+{
+	vector<vector<Slot*>> matches;
+	for (size_t y = 0; y < 6; y++)
+	{
+		vector<Slot*> match;
+		int id = m_BoardSlots[y][x]->GetPiece()->GetPieceType();
+		match.push_back(m_BoardSlots[y][x]);
+		while (match.back()->GetNeighbor(1)->GetPiece()->GetPieceType() == id)
+		{
+			y++;
+			match.push_back(match.back()->GetNeighbor(1));
+			if (match.back()->GetNeighbor(1) == nullptr)
+				break;
+		}
+		if (match.size() > 2) matches.push_back(match);
+	}
+	return matches;
+}
+
+vector<vector<Slot*>> Board::GetMatches()
+{
+	vector<vector<Slot*>> list, temp;
+
+	for (size_t y = 0; y < 8; y++)
+	{
+		temp = GetRowMatches(y);
+		for (size_t i = 0; i < temp.size(); i++)
+		{
+			list.push_back(temp[i]);
+		}
+	}
+	for (size_t x = 0; x < 8; x++)
+	{
+		temp = GetCollumnMatches(x);
+		for (size_t i = 0; i < temp.size(); i++)
+		{
+			list.push_back(temp[i]);
+		}
+	}
+	return list;
+}
+
+vector<vector<Slot*>> Board::GetSwapMatches(Slot *slotFrom, Slot *slotTo)
+{
+	vector<vector<Slot*>> list;
+	SwapPieces(slotFrom, slotTo);
+	list = GetMatches();
+	SwapPieces(slotFrom, slotTo);
+	return list;
 }
 
 void Board::SwapPieces(Slot *slotFrom, Slot *slotTo)
@@ -120,8 +352,72 @@ void Board::SwapPieces(Slot *slotFrom, Slot *slotTo)
 	PieceBehavior *temp = slotFrom->GetPiece();
 	slotFrom->SetPiece(slotTo->GetPiece());
 	slotTo->SetPiece(temp);
-	slotFrom->GetPiece()->MovingMotion(slotFrom->GetPosition());
-	slotTo->GetPiece()->MovingMotion(slotTo->GetPosition());
+}
+
+void Board::ClearMatches(vector<vector<Slot*>> matches)
+{
+	for (size_t i = 0; i < matches.size(); i++)
+	{
+		for (size_t j = 0; j < matches[i].size(); j++)
+		{
+			matches[i][j]->GetPiece()->DeadPhase();
+		}
+	}
+	SettleBoard();
+	FillBoard();
+}
+
+void Board::SettleBoard()
+{
+	for (size_t i = 1; i < 8; i++)
+	{
+		size_t y = 7 - i;
+		for (size_t x = 0; x < 8; x++)
+		{
+			Slot *targetSlot = m_BoardSlots[y][x];
+			PieceBehavior *piece = targetSlot->GetPiece(), *temp;
+			if (!piece->GetDead())
+			{
+				while (targetSlot->GetNeighbor(1) != nullptr)
+				{
+					if (targetSlot->GetNeighbor(1)->GetPiece()->GetDead())
+					{
+						targetSlot = targetSlot->GetNeighbor(1);
+					}
+					else break;
+				}
+				temp = targetSlot->GetPiece();
+				targetSlot->SetPiece(piece);
+				m_BoardSlots[y][x]->SetPiece(temp);
+				piece->FallingMotion(targetSlot->GetPosition().y);
+			}
+		}
+	}
+}
+
+void Board::FillBoard()
+{
+	for (size_t x = 0; x < 8; x++)
+	{
+		int count = 0;
+		for (size_t i = 0; i < 8; i++)
+		{
+			size_t y = 7 - i;
+			if (m_BoardSlots[y][x]->GetPiece()->GetDead())
+				count++;
+		}
+		for (size_t y = 0; y < count; y++)
+		{
+			int type = rand() % 6;
+			Piece *newPiece = new Piece(new sf::CircleShape(*dynamic_cast<sf::CircleShape*>(m_PieceShapes[(size_t)type])));
+			newPiece->SetPosition(m_BoardSlots[y][x]->GetPosition() - sf::Vector2f(0.f, 100.f * count));
+			newPiece->SetType(type);
+			delete m_BoardSlots[y][x]->GetPiece();
+			m_BoardSlots[y][x]->SetPiece(new PieceBehavior());
+			m_BoardSlots[y][x]->GetPiece()->SetPiece(newPiece);
+			m_BoardSlots[y][x]->GetPiece()->FallingMotion(m_BoardSlots[y][x]->GetPosition().y);
+		}
+	}
 }
 
 Slot* Board::GetSlot(size_t indexY, size_t indexX)

@@ -4,6 +4,7 @@
 #include <SFML\Graphics.hpp>
 #include "UIButton.h"
 #include "Board.h"
+#include "MinMaxAI.h"
 
 using namespace std;
 
@@ -19,13 +20,17 @@ private:
 	void OptionsMenu();
 	void ExitGame();
 	void TogglePause();
-	virtual void ChangeTurn();
-	virtual bool GetAI();
-	virtual size_t GetCurrentTurn();
-	virtual int GetPlayerHealth(size_t index);
-	virtual bool GetPlayerWaiting(size_t index);
-	virtual void SetPlayerWaiting(size_t index, bool waiting);
-	virtual void OffsetPlayerHealth(size_t index, int offset);
+	void ChangeTurn();
+	bool GetAI();
+	size_t GetCurrentTurn();
+	int GetPlayerHealth(size_t index);
+	bool GetPlayerWaiting(size_t index);
+	void SetPlayerWaiting(size_t index, bool waiting);
+	void OffsetPlayerHealth(size_t index, int offset);
+	void IdleMotion();
+	void MovingMotion();
+	bool PiecesMoving();
+	void GameOver();
 
 	class State
 	{
@@ -44,6 +49,10 @@ private:
 		virtual bool GetPlayerWaiting(size_t index) = 0;
 		virtual void SetPlayerWaiting(size_t index, bool waiting) = 0;
 		virtual void OffsetPlayerHealth(size_t index, int offset) = 0;
+		virtual bool IdleMotion() = 0;
+		virtual bool MovingMotion() = 0;
+		virtual bool PiecesMoving() = 0;
+		virtual bool GameOver() = 0;
 		virtual bool Update(float dt) = 0;
 		virtual bool Render() = 0;
 
@@ -73,6 +82,10 @@ private:
 		virtual bool GetPlayerWaiting(size_t index);
 		virtual void SetPlayerWaiting(size_t index, bool waiting);
 		virtual void OffsetPlayerHealth(size_t index, int offset);
+		virtual bool IdleMotion();
+		virtual bool MovingMotion();
+		virtual bool PiecesMoving();
+		virtual bool GameOver();
 		virtual bool Update(float dt);
 		virtual bool Render();
 	protected:
@@ -97,6 +110,10 @@ private:
 		virtual bool GetPlayerWaiting(size_t index);
 		virtual void SetPlayerWaiting(size_t index, bool waiting);
 		virtual void OffsetPlayerHealth(size_t index, int offset);
+		virtual bool IdleMotion();
+		virtual bool MovingMotion();
+		virtual bool PiecesMoving();
+		virtual bool GameOver();
 		virtual bool Update(float dt);
 		virtual bool Render();
 	protected:
@@ -121,6 +138,10 @@ private:
 		virtual bool GetPlayerWaiting(size_t index);
 		virtual void SetPlayerWaiting(size_t index, bool waiting);
 		virtual void OffsetPlayerHealth(size_t index, int offset);
+		virtual bool IdleMotion();
+		virtual bool MovingMotion();
+		virtual bool PiecesMoving();
+		virtual bool GameOver();
 		virtual bool Update(float dt);
 		virtual bool Render();
 	protected:
@@ -192,13 +213,20 @@ private:
 		virtual bool GetPlayerWaiting(size_t index);
 		virtual void SetPlayerWaiting(size_t index, bool waiting);
 		virtual void OffsetPlayerHealth(size_t index, int offset);
+		virtual bool IdleMotion();
+		virtual bool MovingMotion();
+		virtual bool PiecesMoving();
+		virtual bool GameOver();
 		virtual bool Update(float dt);
 		virtual bool Render();
 	private:
-		bool m_Paused;
+		bool m_Paused, m_GameOver;
 		Board *m_Board;
 		sf::RectangleShape m_SelectionShape;
 		Slot *m_SelectedSlot;
+		bool m_StoppedMoving = false;
+		MinMaxAI m_MinMaxAI;
+		int m_AICounter = 0;
 	};
 
 	class PausePlayState : public LeafState
@@ -224,11 +252,50 @@ private:
 		virtual bool GetPlayerWaiting(size_t index);
 		virtual void SetPlayerWaiting(size_t index, bool waiting);
 		virtual void OffsetPlayerHealth(size_t index, int offset);
+		virtual bool Update(float dt);
+		virtual bool Render();
 	private:
 		size_t m_CurrentPlayerTurn;
 		bool m_AI;
 		int m_PlayerHealth[2];
 		bool m_PlayerWaiting[2];
+		sf::Text m_HealthText[2], m_TurnText[2];
+	};
+
+	class MotionState : public DecoratedState
+	{
+	public:
+		MotionState(State *parentState, GameBehavior *gameBehavior);
+		virtual bool IdleMotion();
+		virtual bool MovingMotion();
+	};
+
+	class IdleState : public LeafState
+	{
+	public:
+		IdleState(State *parentState, GameBehavior *gameBehavior);
+		virtual bool IdleMotion();
+	};
+
+	class MovingState : public LeafState
+	{
+	public:
+		MovingState(State *parentState, GameBehavior *gameBehavior);
+		virtual bool MovingMotion();
+		virtual bool Update(float dt);
+	};
+
+	class GameOverState : public LeafState
+	{
+	public:
+		GameOverState(State *parentState, GameBehavior *gameBehavior);
+		virtual void Exit(bool finalization);
+		virtual bool Update(float dt);
+		virtual bool Render();
+	private:
+		sf::Text m_WinnerText;
+		UIButton *m_Buttons[2];
+		sf::RectangleShape *m_Background;
 	};
 
 	void Update(float dt);

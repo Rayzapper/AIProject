@@ -30,9 +30,20 @@ public:
 	void Update(float dt);
 	void Render(sf::RenderWindow *window);
 	void GenerateBoard();
+	bool PiecesMoving();
+	bool MatchPossible();
+	vector<vector<Slot*>> GetMatches();
+	vector<vector<Slot*>> GetSwapMatches(Slot *slotFrom, Slot *slotTo);
 	void SwapPieces(Slot *slotFrom, Slot *slotTo);
+	void ClearMatches(vector<vector<Slot*>> matches);
 	Slot* GetSlot(size_t indexY, size_t indexX);
 private:
+	vector<vector<Slot*>> GetRowMatches(size_t y);
+	vector<vector<Slot*>> GetCollumnMatches(size_t x);
+	bool RowMatchPossible(size_t y);
+	bool CollumnMatchPossible(size_t x);
+	void SettleBoard();
+	void FillBoard();
 	Slot* m_BoardSlots[8][8];
 	sf::Shape *m_PieceShapes[6];
 };

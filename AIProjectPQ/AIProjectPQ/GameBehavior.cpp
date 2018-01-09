@@ -128,6 +128,26 @@ void GameBehavior::OffsetPlayerHealth(size_t index, int offset)
 	m_GameState->OffsetPlayerHealth(index, offset);
 }
 
+void GameBehavior::IdleMotion()
+{
+	m_GameState->IdleMotion();
+}
+
+void GameBehavior::MovingMotion()
+{
+	m_GameState->MovingMotion();
+}
+
+bool GameBehavior::PiecesMoving()
+{
+	return m_GameState->PiecesMoving();
+}
+
+void GameBehavior::GameOver()
+{
+	m_GameState->GameOver();
+}
+
 void GameBehavior::Update(float dt)
 {
 	InputManager::GetInstance().Update();
@@ -285,6 +305,50 @@ void GameBehavior::CompositeState::SetPlayerWaiting(size_t index, bool waiting) 
 
 void GameBehavior::CompositeState::OffsetPlayerHealth(size_t index, int offset) {}
 
+bool GameBehavior::CompositeState::IdleMotion()
+{
+	bool handled = false;
+	for (size_t i = 0; i < m_ChildStates.size(); i++)
+	{
+		if (m_ChildStates[i]->IdleMotion())
+			handled = true;
+	}
+	return handled;
+}
+
+bool GameBehavior::CompositeState::MovingMotion()
+{
+	bool handled = false;
+	for (size_t i = 0; i < m_ChildStates.size(); i++)
+	{
+		if (m_ChildStates[i]->MovingMotion())
+			handled = true;
+	}
+	return handled;
+}
+
+bool GameBehavior::CompositeState::PiecesMoving()
+{
+	bool handled = false;
+	for (size_t i = 0; i < m_ChildStates.size(); i++)
+	{
+		if (m_ChildStates[i]->PiecesMoving())
+			handled = true;
+	}
+	return handled;
+}
+
+bool GameBehavior::CompositeState::GameOver()
+{
+	bool handled = false;
+	for (size_t i = 0; i < m_ChildStates.size(); i++)
+	{
+		if (m_ChildStates[i]->GameOver())
+			handled = true;
+	}
+	return handled;
+}
+
 bool GameBehavior::CompositeState::Update(float dt)
 {
 	bool handled = false;
@@ -395,6 +459,26 @@ void GameBehavior::DecoratedState::OffsetPlayerHealth(size_t index, int offset)
 	m_ChildState->OffsetPlayerHealth(index, offset);
 }
 
+bool GameBehavior::DecoratedState::IdleMotion()
+{
+	return m_ChildState->IdleMotion();
+}
+
+bool GameBehavior::DecoratedState::MovingMotion()
+{
+	return m_ChildState->MovingMotion();
+}
+
+bool GameBehavior::DecoratedState::PiecesMoving()
+{
+	return m_ChildState->PiecesMoving();
+}
+
+bool GameBehavior::DecoratedState::GameOver()
+{
+	return m_ChildState->GameOver();
+}
+
 bool GameBehavior::DecoratedState::Update(float dt)
 {
 	return m_ChildState->Update(dt);
@@ -466,6 +550,26 @@ bool GameBehavior::LeafState::GetPlayerWaiting(size_t index)
 void GameBehavior::LeafState::SetPlayerWaiting(size_t index, bool waiting) {}
 
 void GameBehavior::LeafState::OffsetPlayerHealth(size_t index, int offset) {}
+
+bool GameBehavior::LeafState::IdleMotion()
+{
+	return false;
+}
+
+bool GameBehavior::LeafState::MovingMotion()
+{
+	return false;
+}
+
+bool GameBehavior::LeafState::PiecesMoving()
+{
+	return false;
+}
+
+bool GameBehavior::LeafState::GameOver()
+{
+	return false;
+}
 
 bool GameBehavior::LeafState::Update(float dt)
 {
@@ -700,7 +804,7 @@ GameBehavior::PlayGameState::PlayGameState(State *parentState, GameBehavior *gam
 	: CompositeState(parentState, gameBehavior)
 {
 	m_Paused = false;
-	m_ChildStates.push_back(new PausePlayState(parentState, gameBehavior));
+	m_ChildStates.push_back(new PausePlayState(this, gameBehavior));
 	m_Board = new Board();
 	m_SelectionShape.setFillColor(sf::Color::Transparent);
 	m_SelectionShape.setOutlineColor(sf::Color::Yellow);
@@ -709,8 +813,9 @@ GameBehavior::PlayGameState::PlayGameState(State *parentState, GameBehavior *gam
 	m_SelectionShape.setOrigin(sf::Vector2f(47.5f, 47.5f));
 	m_SelectedSlot = nullptr;
 
-	PlayerState *playerState = new PlayerState(parentState, gameBehavior, AI);
-	m_ChildStates.push_back(playerState);
+	m_ChildStates.push_back(new PlayerState(this, gameBehavior, AI));
+
+	m_ChildStates.push_back(new MotionState(this, gameBehavior));
 }
 
 void GameBehavior::PlayGameState::Enter(bool initialization)
@@ -772,44 +877,145 @@ void GameBehavior::PlayGameState::OffsetPlayerHealth(size_t index, int offset)
 	m_ChildStates[1]->OffsetPlayerHealth(index, offset);
 }
 
+bool GameBehavior::PlayGameState::IdleMotion()
+{
+	m_ChildStates[2]->IdleMotion();
+	if (m_Board->MatchPossible())
+	{
+		vector<vector<Slot*>> matches = m_Board->GetMatches();
+		if (matches.size() > 0)
+		{
+			for (size_t i = 0; i < matches.size(); i++)
+			{
+				if (matches[i][0]->GetPiece()->GetPieceType() == 3)
+				{
+					int damage = (int)matches[i].size() - 2;
+					if (m_GameBehavior->GetCurrentTurn() == 0)
+						m_GameBehavior->OffsetPlayerHealth(1, -damage);
+					else
+						m_GameBehavior->OffsetPlayerHealth(0, -damage);
+					if (m_GameBehavior->GetPlayerHealth(0) <= 0 || m_GameBehavior->GetPlayerHealth(1) <= 0)
+					{
+						m_GameBehavior->GameOver();
+					}
+				}
+			}
+			m_Board->ClearMatches(matches);
+			m_GameBehavior->MovingMotion();
+		}
+	}
+	else
+	{
+		m_Board->GenerateBoard();
+		m_GameBehavior->MovingMotion();
+	}
+	if (!m_GameBehavior->PiecesMoving())
+		m_GameBehavior->ChangeTurn();
+	return true;
+}
+
+bool GameBehavior::PlayGameState::MovingMotion()
+{
+	return m_ChildStates[2]->MovingMotion();
+}
+
+bool GameBehavior::PlayGameState::PiecesMoving()
+{
+	return m_Board->PiecesMoving();
+}
+
+bool GameBehavior::PlayGameState::GameOver()
+{
+	m_GameOver = true;
+	m_ChildStates.push_back(new GameOverState(this, m_GameBehavior));
+	return true;
+}
+
 bool GameBehavior::PlayGameState::Update(float dt)
 {
-	if (InputManager::GetInstance().GetInput(ESCCLICK))
+	if (InputManager::GetInstance().GetInput(ESCCLICK) && !m_GameOver)
 		TogglePause();
-	if (m_Paused)
+	if (m_GameOver)
 	{
 		bool handled = false;
 		for (size_t i = 0; i < m_ChildStates.size(); i++)
 		{
-			if (m_ChildStates[i]->Update(dt))
-				handled = true;
+			if (m_ChildStates[i] != nullptr)
+				if (m_ChildStates[i]->Update(dt))
+					handled = true;
+		}
+		return handled;
+	}
+	else if (m_Paused)
+	{
+		bool handled = false;
+		for (size_t i = 0; i < m_ChildStates.size(); i++)
+		{
+			if (m_ChildStates[i] != nullptr)
+				if (m_ChildStates[i]->Update(dt))
+					handled = true;
 		}
 		return handled;
 	}
 	else
 	{
-		m_ChildStates[1]->Update(dt);
-		if (InputManager::GetInstance().GetInput(MOUSELEFTCLICK) && (!m_GameBehavior->GetPlayerWaiting(0) || (!m_GameBehavior->GetPlayerWaiting(1) && !m_GameBehavior->GetAI())))
+		Slot *commandSlot = nullptr;
+		if (!m_GameBehavior->PiecesMoving())
 		{
-			for (size_t y = 0; y < 8; y++)
+			if (!(m_GameBehavior->GetAI() && m_GameBehavior->GetCurrentTurn() == 1))
 			{
-				for (size_t x = 0; x < 8; x++)
+				if (InputManager::GetInstance().GetInput(MOUSELEFTCLICK))
 				{
-					if (m_Board->GetSlot(y, x)->GetMouseover(GetMouseScreenPosition()))
+					for (size_t y = 0; y < 8; y++)
 					{
-						if (m_SelectedSlot == nullptr)
-							m_SelectedSlot = m_Board->GetSlot(y, x);
-						else
+						for (size_t x = 0; x < 8; x++)
 						{
-							for (size_t i = 0; i < 4; i++)
+							if (m_Board->GetSlot(y, x)->GetMouseover(GetMouseScreenPosition()))
 							{
-								if (m_Board->GetSlot(y, x) == m_SelectedSlot->GetNeighbor(i))
+								if (m_SelectedSlot == nullptr)
+									m_SelectedSlot = m_Board->GetSlot(y, x);
+								else
 								{
-									m_Board->SwapPieces(m_SelectedSlot, m_SelectedSlot->GetNeighbor(i));
+									for (size_t i = 0; i < 4; i++)
+									{
+										if (m_Board->GetSlot(y, x) == m_SelectedSlot->GetNeighbor(i))
+										{
+											commandSlot = m_SelectedSlot->GetNeighbor(i);
+											break;
+										}
+									}
+									if (commandSlot == nullptr)
+										m_SelectedSlot = nullptr;
 								}
 							}
-							m_SelectedSlot = nullptr;
 						}
+					}
+				}
+			}
+			else
+			{
+				if (!m_MinMaxAI.GetThinking())
+				{
+					int intBoard[8][8];
+					for (size_t y = 0; y < 8; y++)
+						for (size_t x = 0; x < 8; x++)
+							intBoard[y][x] = m_Board->GetSlot(y, x)->GetPiece()->GetPieceType();
+					m_MinMaxAI.ScanBoard(intBoard);
+					cout << "AI thinking" << endl;
+					m_MinMaxAI.SetMove();
+					cout << "AI decided" << endl;
+					m_MinMaxAI.SetThinking(true);
+				}
+				else
+				{
+					m_AICounter++;
+					if (m_AICounter >= 30)
+					{
+						m_AICounter = 0;
+						Move move = m_MinMaxAI.GetMove();
+						m_SelectedSlot = m_Board->GetSlot(move.m_Y, move.m_X);
+						commandSlot = m_SelectedSlot->GetNeighbor(move.m_Direction);
+						m_MinMaxAI.SetThinking(false);
 					}
 				}
 			}
@@ -818,11 +1024,33 @@ bool GameBehavior::PlayGameState::Update(float dt)
 		{
 			m_SelectedSlot = nullptr;
 		}
+
 		if (m_SelectedSlot != nullptr)
 		{
 			m_SelectionShape.setPosition(m_SelectedSlot->GetPosition());
+			if (commandSlot != nullptr)
+			{
+				vector<vector<Slot*>> matches = m_Board->GetSwapMatches(m_SelectedSlot, commandSlot);
+				if (matches.size() > 0)
+				{
+					m_Board->SwapPieces(m_SelectedSlot, commandSlot);
+					m_SelectedSlot->GetPiece()->MovingMotion(m_SelectedSlot->GetPosition());
+					commandSlot->GetPiece()->MovingMotion(commandSlot->GetPosition());
+					m_GameBehavior->MovingMotion();
+				}
+				else
+				{
+					m_SelectedSlot->GetPiece()->IllegalMotion(commandSlot->GetPosition());
+					commandSlot->GetPiece()->IllegalMotion(m_SelectedSlot->GetPosition());
+					m_GameBehavior->MovingMotion();
+				}
+				m_SelectedSlot = nullptr;
+			}
 		}
 		m_Board->Update(dt);
+		m_ChildStates[1]->Update(dt);
+		m_ChildStates[2]->Update(dt);
+
 		return true;
 	}
 }
@@ -830,18 +1058,23 @@ bool GameBehavior::PlayGameState::Update(float dt)
 bool GameBehavior::PlayGameState::Render()
 {
 	m_Board->Render(GetWindow());
+	m_ChildStates[1]->Render();
 	if (m_SelectedSlot != nullptr)
 	{
 		GetWindow()->draw(m_SelectionShape);
 	}
-	if (m_Paused)
+	if (m_GameOver)
 	{
 		bool handled = false;
-		for (size_t i = 0; i < m_ChildStates.size(); i++)
-		{
-			if (m_ChildStates[i]->Render())
-				handled = true;
-		}
+		if (m_ChildStates[3]->Render())
+			handled = true;
+		return handled;
+	}
+	else if (m_Paused)
+	{
+		bool handled = false;
+		if (m_ChildStates[0]->Render())
+			handled = true;
 		return handled;
 	}
 	else return true;
@@ -912,19 +1145,41 @@ GameBehavior::PlayerState::PlayerState(State *parentState, GameBehavior *gameBeh
 	: LeafState(parentState, gameBehavior)
 {
 	m_AI = AI;
-	m_PlayerHealth[0] = 30;
-	m_PlayerHealth[1] = 30;
+	m_PlayerHealth[0] = 5;
+	m_PlayerHealth[1] = 5;
 	m_PlayerWaiting[0] = true;
 	m_PlayerWaiting[1] = true;
-	m_CurrentPlayerTurn = 0;
+	m_CurrentPlayerTurn = 1;
+	for (size_t i = 0; i < 2; i++)
+	{
+		m_HealthText[i].setFont(*GetBasicFont());
+		m_HealthText[i].setCharacterSize(40);
+		m_HealthText[i].setPosition(20.f + 1050 * i, 740.f);
+
+		m_TurnText[i].setFont(*GetBasicFont());
+		m_TurnText[i].setCharacterSize(30);
+		m_TurnText[i].setPosition(0.f, -100.f);
+	}
+	m_TurnText[0].setFillColor(sf::Color::Blue);
+	m_TurnText[1].setFillColor(sf::Color::Red);
+	m_TurnText[0].setString("Player 1 Turn");
+	m_TurnText[1].setString("Player 2 Turn");
 }
 
 void GameBehavior::PlayerState::ChangeTurn()
 {
 	if (m_CurrentPlayerTurn == 0)
+	{
 		m_CurrentPlayerTurn = 1;
+		m_TurnText[0].setPosition(20.f, -100.f);
+		m_TurnText[1].setPosition(1020.f, 100.f);
+	}
 	else
+	{
 		m_CurrentPlayerTurn = 0;
+		m_TurnText[0].setPosition(20.f, 100.f);
+		m_TurnText[1].setPosition(1020.f, -100.f);
+	}
 }
 
 bool GameBehavior::PlayerState::GetAI()
@@ -955,4 +1210,150 @@ void GameBehavior::PlayerState::SetPlayerWaiting(size_t index, bool waiting)
 void GameBehavior::PlayerState::OffsetPlayerHealth(size_t index, int offset)
 {
 	m_PlayerHealth[index] += offset;
+}
+
+bool GameBehavior::PlayerState::Update(float dt)
+{
+	if (m_PlayerHealth[0] < 0) m_PlayerHealth[0] = 0;
+	if (m_PlayerHealth[1] < 0) m_PlayerHealth[1] = 0;
+	m_HealthText[0].setString(to_string(m_PlayerHealth[0]) + " / 20");
+	m_HealthText[1].setString(to_string(m_PlayerHealth[1]) + " / 20");
+	return true;
+}
+
+bool GameBehavior::PlayerState::Render()
+{
+	GetWindow()->draw(m_HealthText[0]);
+	GetWindow()->draw(m_HealthText[1]);
+	GetWindow()->draw(m_TurnText[0]);
+	GetWindow()->draw(m_TurnText[1]);
+	return true;
+}
+
+
+GameBehavior::MotionState::MotionState(State *parentState, GameBehavior *gameBehavior)
+	: DecoratedState(parentState, gameBehavior)
+{
+	m_ChildState = new MovingState(this, gameBehavior);
+}
+
+bool GameBehavior::MotionState::IdleMotion()
+{
+	if (!m_ChildState->IdleMotion())
+	{
+		Transit(m_ChildState, new IdleState(this, m_GameBehavior));
+	}
+	return m_ChildState->IdleMotion();
+}
+
+bool GameBehavior::MotionState::MovingMotion()
+{
+	if (!m_ChildState->MovingMotion())
+	{
+		Transit(m_ChildState, new MovingState(this, m_GameBehavior));
+	}
+	return m_ChildState->MovingMotion();
+}
+
+
+GameBehavior::IdleState::IdleState(State *parentState, GameBehavior *gameBehavior)
+	: LeafState(parentState, gameBehavior)
+{
+
+}
+
+bool GameBehavior::IdleState::IdleMotion()
+{
+	return true;
+}
+
+
+GameBehavior::MovingState::MovingState(State *parentState, GameBehavior *gameBehavior)
+	: LeafState(parentState, gameBehavior)
+{
+
+}
+
+bool GameBehavior::MovingState::MovingMotion()
+{
+	return true;
+}
+
+bool GameBehavior::MovingState::Update(float dt)
+{
+	if (!m_GameBehavior->PiecesMoving())
+	{
+		m_GameBehavior->IdleMotion();
+	}
+	return true;
+}
+
+
+GameBehavior::GameOverState::GameOverState(State *parentState, GameBehavior *gameBehavior)
+	: LeafState(parentState, gameBehavior)
+{
+	m_WinnerText.setCharacterSize(50);
+	m_WinnerText.setFont(*GetBasicFont());
+	if (m_GameBehavior->GetPlayerHealth(0) <= 0)
+	{
+		m_WinnerText.setString("Player 2 Wins!");
+		m_WinnerText.setFillColor(sf::Color::Red);
+	}
+	else
+	{
+		m_WinnerText.setString("Player 1 Wins!");
+		m_WinnerText.setFillColor(sf::Color::Blue);
+	}
+
+	m_Background = new sf::RectangleShape(sf::Vector2f(1200.f, 900.f));
+	m_Background->setFillColor(sf::Color(0, 0, 0, 128));
+	for (size_t i = 0; i < 2; i++)
+	{
+		sf::RectangleShape *shape = new sf::RectangleShape(sf::Vector2f(300.f, 80.f));
+		shape->setFillColor(sf::Color(0, 64, 192, 255));
+		shape->setOutlineColor(sf::Color(255, 255, 255, 255));
+		shape->setOutlineThickness(-5.f);
+		m_Buttons[i] = new UIButton(sf::IntRect(0, 0, 300, 80), "", GetBasicFont(), shape);
+		m_Buttons[i]->SetPosition(sf::Vector2f(450.f, (i + 3) * 100.f));
+	}
+	m_Buttons[0]->SetString("Exit Game");
+	m_Buttons[1]->SetString("Back to Main Menu");
+}
+
+void GameBehavior::GameOverState::Exit(bool finalization)
+{
+	delete m_Background;
+	delete m_Buttons[0];
+	delete m_Buttons[1];
+}
+
+bool GameBehavior::GameOverState::Update(float dt)
+{
+	if (InputManager::GetInstance().GetInput(MOUSELEFTCLICK))
+	{
+		for (size_t i = 0; i < 2; i++)
+		{
+			if (m_Buttons[i]->GetMouseover(GetMouseScreenPosition()))
+			{
+				sf::String buttonString = m_Buttons[i]->GetString();
+				if (buttonString == "Exit Game")
+					m_GameBehavior->ExitGame();
+				else
+					m_GameBehavior->MainMenu();
+				break;
+			}
+		}
+	}
+	return true;
+}
+
+bool GameBehavior::GameOverState::Render()
+{
+	GetWindow()->draw(*m_Background);
+	for (size_t i = 0; i < 2; i++)
+	{
+		m_Buttons[i]->Render(m_GameBehavior->m_Window);
+	}
+	GetWindow()->draw(m_WinnerText);
+	return true;
 }

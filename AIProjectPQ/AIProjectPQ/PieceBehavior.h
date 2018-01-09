@@ -8,18 +8,21 @@ class PieceBehavior
 public:
 	PieceBehavior();
 	~PieceBehavior();
-	void CreationPhase();
 	void AlivePhase();
-	void DestructionPhase();
 	void DeadPhase();
 	void IdleMotion();
 	void MovingMotion(sf::Vector2f targetPosition);
+	void IllegalMotion(sf::Vector2f targetPosition);
 	void FallingMotion(float targetHeight);
 	void Update(float dt);
 	void Render(sf::RenderWindow *window);
 
 	Piece* GetPiece();
+	int GetPieceType();
+	bool GetDead();
+	bool Moving();
 	void SetPiece(Piece *piece);
+	void SetPieceType(int type);
 private:
 	class State
 	{
@@ -27,15 +30,16 @@ private:
 		virtual void Transit(State *to, State *from) = 0;
 		virtual void Enter(bool initialization) = 0;
 		virtual void Exit(bool finalization) = 0;
-		virtual bool CreationPhase() = 0;
 		virtual bool AlivePhase() = 0;
-		virtual bool DestructionPhase() = 0;
 		virtual bool DeadPhase() = 0;
 		virtual bool IdleMotion() = 0;
 		virtual bool MovingMotion(sf::Vector2f targetPosition) = 0;
+		virtual bool IllegalMotion(sf::Vector2f targetPosition) = 0;
 		virtual bool FallingMotion(float targetHeight) = 0;
 		virtual bool Update(float dt) = 0;
 		virtual bool Render(sf::RenderWindow *window) = 0;
+		virtual bool Moving() = 0;
+		virtual bool GetDead() = 0;
 
 		sf::Vector2f GetPiecePosition();
 		void SetPiecePosition(sf::Vector2f position);
@@ -52,15 +56,16 @@ private:
 		virtual void Transit(State *to, State *from);
 		virtual void Enter(bool initialization);
 		virtual void Exit(bool finalization);
-		virtual bool CreationPhase();
 		virtual bool AlivePhase();
-		virtual bool DestructionPhase();
 		virtual bool DeadPhase();
 		virtual bool IdleMotion();
 		virtual bool MovingMotion(sf::Vector2f targetPosition);
+		virtual bool IllegalMotion(sf::Vector2f targetPosition);
 		virtual bool FallingMotion(float targetHeight);
 		virtual bool Update(float dt);
 		virtual bool Render(sf::RenderWindow *window);
+		virtual bool Moving();
+		virtual bool GetDead();
 	protected:
 		CompositeState(State *parentState, PieceBehavior *pieceBehavior);
 		vector<State*> m_ChildStates;
@@ -72,15 +77,16 @@ private:
 		virtual void Transit(State *to, State *from);
 		virtual void Enter(bool initialization);
 		virtual void Exit(bool finalization);
-		virtual bool CreationPhase();
 		virtual bool AlivePhase();
-		virtual bool DestructionPhase();
 		virtual bool DeadPhase();
 		virtual bool IdleMotion();
 		virtual bool MovingMotion(sf::Vector2f targetPosition);
+		virtual bool IllegalMotion(sf::Vector2f targetPosition);
 		virtual bool FallingMotion(float targetHeight);
 		virtual bool Update(float dt);
 		virtual bool Render(sf::RenderWindow *window);
+		virtual bool Moving();
+		virtual bool GetDead();
 	protected:
 		DecoratedState(State *parentState, PieceBehavior *pieceBehavior);
 		State *m_ChildState;
@@ -92,15 +98,16 @@ private:
 		virtual void Transit(State *to, State *from);
 		virtual void Enter(bool initialization);
 		virtual void Exit(bool finalization);
-		virtual bool CreationPhase();
 		virtual bool AlivePhase();
-		virtual bool DestructionPhase();
 		virtual bool DeadPhase();
 		virtual bool IdleMotion();
 		virtual bool MovingMotion(sf::Vector2f targetPosition);
+		virtual bool IllegalMotion(sf::Vector2f targetPosition);
 		virtual bool FallingMotion(float targetHeight);
 		virtual bool Update(float dt);
 		virtual bool Render(sf::RenderWindow *window);
+		virtual bool Moving();
+		virtual bool GetDead();
 	protected:
 		LeafState(State *parentState, PieceBehavior *pieceBehavior);
 	};
@@ -116,17 +123,8 @@ private:
 	{
 	public:
 		PhaseState(State *parentState, PieceBehavior *pieceBehavior);
-		virtual bool CreationPhase();
 		virtual bool AlivePhase();
-		virtual bool DestructionPhase();
 		virtual bool DeadPhase();
-	};
-
-	class CreationState : public LeafState
-	{
-	public:
-		CreationState(State *parentState, PieceBehavior *pieceBehavior);
-		virtual bool CreationPhase();
 	};
 
 	class AliveState : public LeafState
@@ -136,18 +134,12 @@ private:
 		virtual bool AlivePhase();
 	};
 
-	class DestructionState : public LeafState
-	{
-	public:
-		DestructionState(State *parentState, PieceBehavior *pieceBehavior);
-		virtual bool DestructionPhase();
-	};
-
 	class DeadState : public LeafState
 	{
 	public:
 		DeadState(State *parentState, PieceBehavior *pieceBehavior);
 		virtual bool DeadPhase();
+		virtual bool GetDead();
 	};
 
 	class MotionState : public DecoratedState
@@ -156,6 +148,7 @@ private:
 		MotionState(State *parentState, PieceBehavior *pieceBehavior);
 		virtual bool IdleMotion();
 		virtual bool MovingMotion(sf::Vector2f targetPosition);
+		virtual bool IllegalMotion(sf::Vector2f targetPosition);
 		virtual bool FallingMotion(float targetHeight);
 	};
 
@@ -172,9 +165,23 @@ private:
 		MovingState(State *parentState, PieceBehavior *pieceBehavior);
 		virtual bool MovingMotion(sf::Vector2f targetPosition);
 		virtual bool Update(float dt);
+		virtual bool Moving();
 	private:
 		sf::Vector2f m_TargetPosition, m_DeltaVector;
-		float m_Speed, m_Length;
+		float m_Length;
+	};
+
+	class IllegalMovementState : public LeafState
+	{
+	public:
+		IllegalMovementState(State *parentState, PieceBehavior *pieceBehavior);
+		virtual bool IllegalMotion(sf::Vector2f targetPosition);
+		virtual bool Update(float dt);
+		virtual bool Moving();
+	private:
+		sf::Vector2f m_TargetPosition, m_DeltaVector, m_StartPosition;
+		float m_Length, m_Distance;
+		bool m_To;
 	};
 
 	class FallingState : public LeafState
@@ -183,6 +190,7 @@ private:
 		FallingState(State *parentState, PieceBehavior *pieceBehavior);
 		virtual bool FallingMotion(float targetHeight);
 		virtual bool Update(float dt);
+		virtual bool Moving();
 	private:
 		float m_TargetHeight, m_Speed;
 	};
